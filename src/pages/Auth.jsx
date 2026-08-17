@@ -11,14 +11,74 @@ import { useToast } from "../components/Toast";
 export default function Auth() {
   const [mode, setMode] = useState("login");
   const [showPw, setShowPw] = useState(false);
+
+  const [userName, setUserName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const showToast = useToast();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    showToast(mode === "login" ? "Welcome back!" : "Account created — welcome to Pronet!", "success");
-    navigate("/feed");
-  };
+
+    setLoading(true);
+
+    try {
+        const endpoint =
+            mode === "login"
+                ? "http://localhost:5000/api/auth/login"
+                : "http://localhost:5000/api/auth/register";
+
+        const requestBody =
+            mode === "login"
+                ? {
+                    email: email,
+                    password: password
+                }
+                : {
+                    user_name: userName,
+                    email: email,
+                    password: password
+                };
+
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showToast(data.message, "error");
+            return;
+        }
+
+        localStorage.setItem(
+            "loggedInUser",
+            JSON.stringify(data.user)
+        );
+
+        showToast(data.message, "success");
+
+        navigate("/feed");
+
+    } catch (error) {
+        console.error(error);
+
+        showToast(
+            "Unable to connect to the server",
+            "error"
+        );
+
+    } finally {
+        setLoading(false);
+    }
+};
 
   return (
     <PageTransition className="min-h-[calc(100vh-90px)] flex items-center justify-center px-4 py-12 relative">
@@ -75,21 +135,38 @@ export default function Auth() {
               {mode === "signup" && (
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
-                  <Input label="Full name" placeholder="Aarav Kapoor" required className="pl-10" />
+                  <Input
+                      label="Full name"
+                      placeholder="Aarav Kapoor"
+                      required
+                      className="pl-10"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                  />
                 </div>
               )}
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
-                <Input label="Email" type="email" placeholder="you@example.com" required className="pl-10" />
+                <Input
+                  label="Email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                  className="pl-10"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
                 <Input
-                  label="Password"
-                  type={showPw ? "text" : "password"}
-                  placeholder="••••••••"
-                  required
-                  className="pl-10 pr-10"
+                    label="Password"
+                    type={showPw ? "text" : "password"}
+                    placeholder="••••••••"
+                    required
+                    className="pl-10 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                 />
                 <button
                   type="button"
@@ -102,8 +179,17 @@ export default function Auth() {
             </motion.div>
           </AnimatePresence>
 
-          <Button type="submit" className="w-full mt-2" size="lg">
-            {mode === "login" ? "Log In" : "Create Account"}
+          <Button
+              type="submit"
+              className="w-full mt-2"
+              size="lg"
+              disabled={loading}
+          >
+              {loading
+                  ? "Please wait..."
+                  : mode === "login"
+                      ? "Log In"
+                      : "Create Account"}
           </Button>
         </form>
 
