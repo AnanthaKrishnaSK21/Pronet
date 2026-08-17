@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Braces, Mail, Lock, User, Code2, Eye, EyeOff } from "lucide-react";
+import { Braces, Mail, Lock, User, Code2, Eye, EyeOff, Briefcase, MapPin, Github, FileText } from "lucide-react";
 import GlassCard from "../components/GlassCard";
 import Button from "../components/Button";
 import { Input } from "../components/Input";
@@ -13,6 +13,10 @@ export default function Auth() {
   const [showPw, setShowPw] = useState(false);
 
   const [userName, setUserName] = useState("");
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
+  const [githubUrl, setGithubUrl] = useState("");
+  const [bio, setBio] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,7 +44,11 @@ export default function Auth() {
                 : {
                     user_name: userName,
                     email: email,
-                    password: password
+                    password: password,
+                    title: title,
+                    location: location,
+                    github_url: githubUrl,
+                    bio: bio
                 };
 
         const response = await fetch(endpoint, {
@@ -133,17 +141,61 @@ export default function Auth() {
               className="space-y-4"
             >
               {mode === "signup" && (
-                <div className="relative">
-                  <User className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
-                  <Input
-                      label="Full name"
-                      placeholder="Aarav Kapoor"
-                      required
-                      className="pl-10"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                  />
-                </div>
+                <>
+                  <div className="relative">
+                    <User className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
+                    <Input
+                        label="Full name"
+                        placeholder="Aarav Kapoor"
+                        required
+                        className="pl-10"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Briefcase className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
+                    <Input
+                        label="Title"
+                        placeholder="Full-Stack Developer"
+                        className="pl-10"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
+                    <Input
+                        label="Location"
+                        placeholder="Bengaluru, India"
+                        className="pl-10"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Github className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
+                    <Input
+                        label="GitHub URL"
+                        placeholder="https://github.com/aaravk"
+                        type="url"
+                        className="pl-10"
+                        value={githubUrl}
+                        onChange={(e) => setGithubUrl(e.target.value)}
+                    />
+                  </div>
+                  <div className="relative">
+                    <FileText className="w-4 h-4 absolute left-4 top-[14px] text-slate-500" />
+                    <Input
+                        label="Bio"
+                        textarea
+                        placeholder="Building developer tools by day, breaking them by night."
+                        className="pl-10"
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                    />
+                  </div>
+                </>
               )}
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />

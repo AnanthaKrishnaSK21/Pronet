@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Braces, Compass, Inbox, Users, PlusCircle, User as UserIcon, Menu, X } from "lucide-react";
+import { Braces, Compass, Inbox, Users, PlusCircle, User as UserIcon, Menu, X, LogOut } from "lucide-react";
 import Avatar from "./Avatar";
 import Button from "./Button";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "../context/ThemeContext";
 import { currentUser } from "../data/mock";
+import { useToast } from "./Toast";
 
 const links = [
   { to: "/feed", label: "Explore", icon: Compass },
@@ -20,12 +21,19 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const showToast = useToast();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("loggedInUser");
+    showToast("Logged out successfully", "success");
+    navigate("/auth");
+  };
 
   return (
     <motion.header
@@ -97,6 +105,13 @@ export default function Navbar() {
           <Link to="/profile">
             <Avatar src={currentUser.avatar} online size="sm" ring />
           </Link>
+          <button
+            onClick={handleLogout}
+            aria-label="Log out"
+            className="flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="md:hidden flex items-center gap-1">
@@ -145,6 +160,13 @@ export default function Navbar() {
             <PlusCircle className="w-4 h-4" />
             New Project
           </Button>
+          <button
+            onClick={() => { setMobileOpen(false); handleLogout(); }}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 dark:text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Log out
+          </button>
         </motion.div>
       )}
     </motion.header>

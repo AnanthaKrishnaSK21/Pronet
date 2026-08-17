@@ -1,12 +1,14 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { MapPin, Code2, Users2, FolderGit2, Activity, CheckCircle2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { MapPin, Code2, Users2, FolderGit2, Activity, CheckCircle2, LogOut } from "lucide-react";
 import GlassCard from "../components/GlassCard";
 import Avatar from "../components/Avatar";
 import Button from "../components/Button";
 import { TechPill } from "../components/Pill";
 import PageTransition, { staggerContainer, staggerItem } from "../components/PageTransition";
 import { useEffect, useState } from "react";
+import { useToast } from "../components/Toast";
+import { currentUser } from "../data/mock";
 
 const contributionWeeks = 24;
 function useContributionData() {
@@ -41,6 +43,14 @@ export default function Profile() {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const showToast = useToast();
+
+  const handleLogout = () => {
+    localStorage.removeItem("loggedInUser");
+    showToast("Logged out successfully", "success");
+    navigate("/auth");
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem("loggedInUser");
@@ -77,15 +87,23 @@ export default function Profile() {
             <Avatar src={currentUser.avatar} online size="xl" ring />
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{user ? user.user_name : "Loading..."}</h1>
-              <p className="text-slate-600 dark:text-slate-400 text-sm mb-2">{user ? user.email : ""}</p>
+              <p className="text-slate-600 dark:text-slate-400 text-sm mb-2">{user?.title || (user ? user.email : "")}</p>
               <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{currentUser.location}</span>
-                <span className="flex items-center gap-1"><Code2 className="w-3.5 h-3.5" />{currentUser.github}</span>
+                {user?.location && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{user.location}</span>}
+                {user?.github_url && <span className="flex items-center gap-1"><Code2 className="w-3.5 h-3.5" />{user.github_url}</span>}
               </div>
             </div>
-            <Button variant="glass">Edit Profile</Button>
+            <div className="flex items-center gap-2">
+              <Button variant="glass">Edit Profile</Button>
+              <Button variant="glass" onClick={handleLogout}>
+                <LogOut className="w-4 h-4" />
+                Log out
+              </Button>
+            </div>
           </div>
-          <p className="relative text-sm text-slate-700 dark:text-slate-300 mt-6 leading-relaxed max-w-2xl">{currentUser.bio}</p>
+          {user?.bio && (
+            <p className="relative text-sm text-slate-700 dark:text-slate-300 mt-6 leading-relaxed max-w-2xl">{user.bio}</p>
+          )}
         </GlassCard>
 
         <motion.div variants={staggerItem} className="grid grid-cols-2 sm:grid-cols-4 gap-4">

@@ -3,6 +3,7 @@ import cors from "cors";
 import bcrypt from "bcryptjs";
 import db from "./db.js";
 
+// Users table requires: title, location, github_url, bio (nullable VARCHAR/TEXT columns)
 const app = express();
 
 app.use(cors());
@@ -17,7 +18,7 @@ app.get("/", (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
     try {
-        const { user_name, email, password } = req.body;
+        const { user_name, email, password, title, location, github_url, bio } = req.body;
 
         if (!user_name || !email || !password) {
             return res.status(400).json({
@@ -39,8 +40,8 @@ app.post("/api/auth/register", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         await db.execute(
-            "INSERT INTO Users (user_name, email, password) VALUES (?, ?, ?)",
-            [user_name, email, hashedPassword]
+            "INSERT INTO Users (user_name, email, password, title, location, github_url, bio) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [user_name, email, hashedPassword, title || null, location || null, github_url || null, bio || null]
         );
 
         res.status(201).json({
@@ -95,7 +96,11 @@ app.post("/api/auth/login", async (req, res) => {
             message: "Login successful",
             user: {
                 user_name: user.user_name,
-                email: user.email
+                email: user.email,
+                title: user.title,
+                location: user.location,
+                github_url: user.github_url,
+                bio: user.bio
             }
         });
 
