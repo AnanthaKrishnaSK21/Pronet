@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Braces, Mail, Lock, User, Code2, Eye, EyeOff, Briefcase, MapPin, Github, FileText } from "lucide-react";
+import { Braces, Mail, Lock, User, Code2, Eye, EyeOff, Briefcase, MapPin, FileText } from "lucide-react";
 import GlassCard from "../components/GlassCard";
 import Button from "../components/Button";
 import { Input } from "../components/Input";
@@ -174,7 +174,7 @@ export default function Auth() {
                     />
                   </div>
                   <div className="relative">
-                    <Github className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
+                    <Code2 className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
                     <Input
                         label="GitHub URL"
                         placeholder="https://github.com/aaravk"
