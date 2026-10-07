@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, X, Inbox } from "lucide-react";
@@ -7,19 +7,69 @@ import Avatar from "../components/Avatar";
 import Button from "../components/Button";
 import PageTransition, { staggerContainer, staggerItem } from "../components/PageTransition";
 import { useToast } from "../components/Toast";
-import { collabRequests as initialRequests } from "../data/mock";
+import { useAuth } from "../context/AuthContext";
 
 export default function Requests() {
-  const [requests, setRequests] = useState(initialRequests);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [exitDir, setExitDir] = useState({});
   const showToast = useToast();
+  const { user } = useAuth();
 
-  const respond = (req, accepted) => {
+  useEffect(() => {
+    if (!user?.user_name) {
+      setLoading(false);
+      return;
+    }
+
+    fetch(`http://localhost:5000/api/requests?user=${user.user_name}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch");
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const formatted = data
+            .filter((r) => !r.status || r.status === "pending")
+            .map((r) => ({
+            id: r.id,
+            user: {
+              name: r.user?.user_name || "Developer",
+              handle: `@${r.user?.user_name || "user"}`,
+              avatar: r.user?.avatar || `https://api.dicebear.com/9.x/notionists/svg?seed=${r.user?.user_name}&backgroundColor=b6e3f4,c0aede,d1d4f9`,
+              online: true,
+            },
+            project: {
+              id: r.project?.id || "p1",
+              title: r.project?.title || "Project",
+            },
+            message: r.message,
+            time: "Recently",
+          }));
+          setRequests(formatted);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  const respond = async (req, accepted) => {
     setExitDir((d) => ({ ...d, [req.id]: accepted ? 1 : -1 }));
+
+    try {
+      await fetch(`http://localhost:5000/api/requests/${req.id}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: accepted ? "accept" : "decline" }),
+      });
+    } catch (_) {}
+
     setTimeout(() => {
       setRequests((r) => r.filter((x) => x.id !== req.id));
       showToast(
-        accepted ? `Accepted ${req.user.name} for ${req.project.title}` : `Declined ${req.user.name}'s request`,
+        accepted
+          ? `Accepted ${req.user.name} for ${req.project.title} (Added to Contributors)`
+          : `Declined ${req.user.name}'s request`,
         accepted ? "success" : "info"
       );
     }, 260);

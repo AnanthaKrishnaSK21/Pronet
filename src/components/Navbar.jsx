@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Braces, Compass, Inbox, Users, PlusCircle, User as UserIcon, Menu, X } from "lucide-react";
+import { Braces, Compass, Inbox, Users, PlusCircle, User as UserIcon, LogOut, LogIn, Menu, X } from "lucide-react";
 import Avatar from "./Avatar";
 import Button from "./Button";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "../context/ThemeContext";
-import { currentUser } from "../data/mock";
+import { useAuth } from "../context/AuthContext";
 
 const links = [
   { to: "/feed", label: "Explore", icon: Compass },
@@ -19,6 +19,8 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const isDark = theme === "dark";
 
   useEffect(() => {
@@ -26,6 +28,35 @@ export default function Navbar() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // Poll unread messages and incoming requests for active user
+  useEffect(() => {
+    if (!user?.user_name) return;
+
+    const checkNotifications = () => {
+      fetch(`http://localhost:5000/api/connections?user=${user.user_name}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const unread = data?.total_unread || 0;
+          const pending = data?.incoming_requests?.length || 0;
+          setUnreadMessages(unread + pending);
+        })
+        .catch(() => {});
+    };
+
+    checkNotifications();
+    const interval = setInterval(checkNotifications, 6000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/auth");
+  };
+
+  const userAvatar = user?.avatar || (user?.user_name
+    ? `https://api.dicebear.com/9.x/notionists/svg?seed=${user.user_name}&backgroundColor=b6e3f4,c0aede,d1d4f9`
+    : `https://api.dicebear.com/9.x/notionists/svg?seed=guest&backgroundColor=b6e3f4,c0aede,d1d4f9`);
 
   return (
     <motion.header
@@ -81,7 +112,12 @@ export default function Navbar() {
                     />
                   )}
                   <Icon className="w-4 h-4 relative z-10" />
-                  <span className="relative z-10">{label}</span>
+                  <span className="relative z-10 flex items-center gap-1.5">
+                    {label}
+                    {to === "/connections" && unreadMessages > 0 && (
+                      <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                    )}
+                  </span>
                 </>
               )}
             </NavLink>
@@ -94,9 +130,29 @@ export default function Navbar() {
             <PlusCircle className="w-4 h-4" />
             New Project
           </Button>
-          <Link to="/profile">
-            <Avatar src={currentUser.avatar} online size="sm" ring />
-          </Link>
+
+          {isAuthenticated ? (
+            <div className="flex items-center gap-2">
+              <Link to="/profile" className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 transition-colors">
+                <Avatar src={userAvatar} online size="sm" ring />
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 max-w-[100px] truncate">
+                  {user?.user_name}
+                </span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                title="Sign Out"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Button size="sm" variant="primary" onClick={() => navigate("/auth")}>
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </Button>
+          )}
         </div>
 
         <div className="md:hidden flex items-center gap-1">
@@ -130,17 +186,44 @@ export default function Navbar() {
               }
             >
               <Icon className="w-4 h-4" />
-              {label}
+              <span className="flex-1 flex items-center justify-between">
+                {label}
+                {to === "/connections" && unreadMessages > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500 text-white">
+                    {unreadMessages}
+                  </span>
+                )}
+              </span>
             </NavLink>
           ))}
-          <NavLink
-            to="/profile"
-            onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300"
-          >
-            <UserIcon className="w-4 h-4" />
-            Profile
-          </NavLink>
+          {isAuthenticated ? (
+            <>
+              <NavLink
+                to="/profile"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300"
+              >
+                <UserIcon className="w-4 h-4" />
+                Profile ({user?.user_name})
+              </NavLink>
+              <button
+                onClick={() => { setMobileOpen(false); handleLogout(); }}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-rose-500 hover:bg-rose-500/10 text-left"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <NavLink
+              to="/auth"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-indigo-500 font-semibold"
+            >
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </NavLink>
+          )}
           <Button size="sm" variant="primary" className="mt-1" onClick={() => { setMobileOpen(false); navigate("/create"); }}>
             <PlusCircle className="w-4 h-4" />
             New Project

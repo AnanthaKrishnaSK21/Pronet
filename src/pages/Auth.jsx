@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Braces, Mail, Lock, User, Code2, Eye, EyeOff } from "lucide-react";
+import { Braces, Mail, Lock, User, Code2, Eye, EyeOff, Briefcase, MapPin } from "lucide-react";
 import GlassCard from "../components/GlassCard";
 import Button from "../components/Button";
 import { Input } from "../components/Input";
 import PageTransition from "../components/PageTransition";
 import { useToast } from "../components/Toast";
+import { useAuth } from "../context/AuthContext";
 
 export default function Auth() {
   const [mode, setMode] = useState("login");
@@ -15,70 +16,40 @@ export default function Auth() {
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const showToast = useToast();
+  const { login, register } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
 
     try {
-        const endpoint =
-            mode === "login"
-                ? "http://localhost:5000/api/auth/login"
-                : "http://localhost:5000/api/auth/register";
-
-        const requestBody =
-            mode === "login"
-                ? {
-                    email: email,
-                    password: password
-                }
-                : {
-                    user_name: userName,
-                    email: email,
-                    password: password
-                };
-
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(requestBody)
+      if (mode === "login") {
+        await login(email, password);
+        showToast("Signed in successfully!", "success");
+      } else {
+        await register({
+          user_name: userName,
+          email,
+          password,
+          title: title.trim() || "Full-Stack Developer",
+          location: location.trim() || "Bengaluru, India",
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            showToast(data.message, "error");
-            return;
-        }
-
-        localStorage.setItem(
-            "loggedInUser",
-            JSON.stringify(data.user)
-        );
-
-        showToast(data.message, "success");
-
-        navigate("/feed");
-
+        showToast("Account created successfully!", "success");
+      }
+      navigate("/feed");
     } catch (error) {
-        console.error(error);
-
-        showToast(
-            "Unable to connect to the server",
-            "error"
-        );
-
+      console.error(error);
+      showToast(error.message || "Authentication failed", "error");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
 
   return (
     <PageTransition className="min-h-[calc(100vh-90px)] flex items-center justify-center px-4 py-12 relative">
@@ -133,17 +104,39 @@ export default function Auth() {
               className="space-y-4"
             >
               {mode === "signup" && (
-                <div className="relative">
-                  <User className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
-                  <Input
-                      label="Full name"
-                      placeholder="Aarav Kapoor"
-                      required
-                      className="pl-10"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                  />
-                </div>
+                <>
+                  <div className="relative">
+                    <User className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
+                    <Input
+                        label="Username"
+                        placeholder="aaravk"
+                        required
+                        className="pl-10"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Briefcase className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
+                    <Input
+                        label="Professional Title"
+                        placeholder="Full-Stack Developer"
+                        className="pl-10"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="relative">
+                    <MapPin className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />
+                    <Input
+                        label="Location"
+                        placeholder="Bengaluru, India"
+                        className="pl-10"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                    />
+                  </div>
+                </>
               )}
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-4 top-[42px] text-slate-500" />

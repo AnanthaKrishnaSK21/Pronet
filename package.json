@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "backend": "node backend/server.js",
+    "backend:django": "django_backend\\venv\\Scripts\\python.exe django_backend/manage.py runserver 5000",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"

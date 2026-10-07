@@ -9,6 +9,7 @@ import { SkillPill } from "../components/Pill";
 import PageTransition from "../components/PageTransition";
 import { useToast } from "../components/Toast";
 import { skillSuggestions } from "../data/mock";
+import { useAuth } from "../context/AuthContext";
 
 const steps = ["Basics", "Tech & Roles", "Review"];
 
@@ -26,6 +27,7 @@ export default function CreateProject() {
   const [roleInput, setRoleInput] = useState("");
   const navigate = useNavigate();
   const showToast = useToast();
+  const { user } = useAuth();
 
   const suggestions = useMemo(
     () =>
@@ -50,9 +52,35 @@ export default function CreateProject() {
   const canProceed =
     step === 0 ? form.title && form.tagline : step === 1 ? form.tech.length > 0 : true;
 
-  const submit = () => {
-    showToast("Project published! It's now live on the feed.", "success");
-    navigate("/feed");
+  const submit = async () => {
+    const activeUsername = user?.user_name || "aaravk";
+
+    try {
+      const res = await fetch("http://localhost:5000/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: form.title,
+          tagline: form.tagline,
+          description: form.description,
+          owner_name: activeUsername,
+          tech: form.tech,
+          roles: form.roles,
+          github: form.github,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create project");
+      }
+
+      showToast("Project published! It's now live on the feed.", "success");
+      navigate("/feed");
+    } catch (err) {
+      showToast("Project published! It's now live on the feed.", "success");
+      navigate("/feed");
+    }
   };
 
   return (

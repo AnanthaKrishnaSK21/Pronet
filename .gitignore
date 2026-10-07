@@ -25,3 +25,8 @@ dist-ssr
 
 .env
 backend/.env
+django_backend/.env
+django_backend/venv/
+django_backend/db.sqlite3
+__pycache__/
+*.py[cod]
