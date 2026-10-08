@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, TechStack, Project, ProjectTechStack, Contributor, Request, Connection
+from .models import User, TechStack, Project, ProjectTechStack, Contributor, Request, Connection, ProjectLike
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -26,13 +26,15 @@ class ProjectSerializer(serializers.ModelSerializer):
     owner = UserSerializer(read_only=True)
     tech = serializers.SerializerMethodField()
     collaborators = serializers.SerializerMethodField()
+    forked_from = serializers.SerializerMethodField()
+    liked_by_users = serializers.SerializerMethodField()
 
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'tagline', 'description', 'owner', 'tech',
             'roles_needed', 'github', 'stars', 'forks', 'collaborators',
-            'comments', 'created_at'
+            'comments', 'forked_from', 'liked_by_users', 'created_at'
         ]
 
     def get_tech(self, obj):
@@ -41,6 +43,19 @@ class ProjectSerializer(serializers.ModelSerializer):
     def get_collaborators(self, obj):
         collabs = obj.contributers.select_related('user').all()
         return [UserSerializer(c.user).data for c in collabs]
+
+    def get_forked_from(self, obj):
+        if not obj.forked_from:
+            return None
+        return {
+            'id': obj.forked_from.id,
+            'title': obj.forked_from.title,
+            'owner_username': obj.forked_from.owner.user_name,
+        }
+
+    def get_liked_by_users(self, obj):
+        return list(obj.likes.values_list('user__user_name', flat=True))
+
 
 
 class RequestSerializer(serializers.ModelSerializer):

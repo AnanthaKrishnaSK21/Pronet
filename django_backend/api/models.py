@@ -53,6 +53,7 @@ class Project(models.Model):
     github = models.CharField(max_length=255, blank=True, default="")
     stars = models.IntegerField(default=0)
     forks = models.IntegerField(default=0)
+    forked_from = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='forks_created', db_column='forked_from_id')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -61,6 +62,20 @@ class Project(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class ProjectLike(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='likes', db_column='project_id')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='liked_projects', db_column='user_id')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'project_likes'
+        unique_together = ('project', 'user')
+
+    def __str__(self):
+        return f"{self.user.user_name} liked {self.project.title}"
+
 
 
 class ProjectTechStack(models.Model):

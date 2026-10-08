@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { MapPin, Code2, Users2, FolderGit2, Activity, CheckCircle2, Edit3, Save, PlusCircle, Inbox } from "lucide-react";
+import { MapPin, Code2, Users2, FolderGit2, Activity, CheckCircle2, Edit3, Save, PlusCircle, Inbox, GitFork, Heart } from "lucide-react";
 import GlassCard from "../components/GlassCard";
 import Avatar from "../components/Avatar";
 import Button from "../components/Button";
@@ -288,29 +288,76 @@ export default function Profile() {
               </Link>
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
-              {projects.map((p) => (
-                <Link
-                  key={p.id}
-                  to={`/project/${p.id}`}
-                  className="block p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 hover:border-indigo-400/30 hover:bg-slate-900/8 dark:hover:bg-white/8 transition-colors"
-                >
-                  <p className="font-medium text-slate-800 dark:text-slate-100 mb-1">{p.title}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{p.tagline}</p>
-                  {Array.isArray(p.tech) && p.tech.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2.5">
-                      {p.tech.slice(0, 3).map((t) => (
-                        <span
-                          key={t}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </Link>
-              ))}
+            <div className="space-y-3">
+              {/* Group: original projects */}
+              {projects.filter((p) => !p.forked_from).length > 0 && (
+                <>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold mb-2">Original</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {projects.filter((p) => !p.forked_from).map((p) => (
+                      <Link
+                        key={p.id}
+                        to={`/project/${p.id}`}
+                        className="block p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 hover:border-indigo-400/30 hover:bg-slate-900/8 dark:hover:bg-white/8 transition-colors"
+                      >
+                        <p className="font-medium text-slate-800 dark:text-slate-100 mb-1">{p.title}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{p.tagline}</p>
+                        <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                          <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{p.stars ?? 0}</span>
+                          <span className="flex items-center gap-1"><GitFork className="w-3 h-3" />{p.forks ?? 0}</span>
+                        </div>
+                        {Array.isArray(p.tech) && p.tech.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2.5">
+                            {p.tech.slice(0, 3).map((t) => (
+                              <span key={t} className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Group: forked projects */}
+              {projects.filter((p) => p.forked_from).length > 0 && (
+                <>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold mt-5 mb-2">Forked</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {projects.filter((p) => p.forked_from).map((p) => (
+                      <Link
+                        key={p.id}
+                        to={`/project/${p.id}`}
+                        className="block p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-indigo-500/20 hover:border-indigo-400/40 transition-colors relative"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-medium text-slate-800 dark:text-slate-100">{p.title}</p>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/20 font-medium">Fork</span>
+                        </div>
+                        <p className="text-xs text-indigo-400 flex items-center gap-1 mb-1">
+                          <GitFork className="w-3 h-3" />
+                          From:{" "}
+                          <span
+                            className="hover:underline"
+                            onClick={(e) => { e.preventDefault(); window.location.href = `/project/${p.forked_from.id}`; }}
+                          >
+                            {p.forked_from.title}
+                          </span>
+                          &nbsp;by @{p.forked_from.owner_username}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{p.tagline}</p>
+                        {Array.isArray(p.tech) && p.tech.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2.5">
+                            {p.tech.slice(0, 3).map((t) => (
+                              <span key={t} className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </GlassCard>

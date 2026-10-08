@@ -17,6 +17,8 @@ urlpatterns = [
     # Projects
     re_path(r'^projects/?$', views.projects_list, name='projects_list'),
     re_path(r'^projects/(?P<pk>[^/]+)/comments/?$', views.add_project_comment, name='add_project_comment'),
+    re_path(r'^projects/(?P<pk>[^/]+)/like/?$', views.like_project, name='like_project'),
+    re_path(r'^projects/(?P<pk>[^/]+)/fork/?$', views.fork_project, name='fork_project'),
     re_path(r'^projects/(?P<pk>[^/]+)/?$', views.project_detail, name='project_detail'),
 
     # Collaboration Requests

@@ -3,7 +3,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import models, transaction
-from .models import User, TechStack, Project, ProjectTechStack, Contributor, Request, Connection
+from .models import User, TechStack, Project, ProjectTechStack, Contributor, Request, Connection, ProjectLike
 from .serializers import UserSerializer, ProjectSerializer, RequestSerializer, ConnectionSerializer
 
 
@@ -136,7 +136,12 @@ def user_projects(request, user_name):
         if not user:
             return Response([], status=status.HTTP_200_OK)
 
-        projects = Project.objects.filter(owner=user).prefetch_related('tech_associations__tech', 'contributers__user')
+        # Return both owned projects AND forked projects
+        owned = Project.objects.filter(owner=user).prefetch_related('tech_associations__tech', 'contributers__user', 'likes')
+        forked = Project.objects.filter(owner=user, forked_from__isnull=False).prefetch_related('tech_associations__tech', 'contributers__user', 'likes')
+
+        # Combine: all projects owned by user (includes forks since forks are also owned by user)
+        projects = owned
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Exception as e:
@@ -188,7 +193,7 @@ def user_profile(request, user_name):
 def projects_list(request):
     try:
         if request.method == 'GET':
-            projects = Project.objects.all().prefetch_related('tech_associations__tech', 'contributers__user')
+            projects = Project.objects.all().prefetch_related('tech_associations__tech', 'contributers__user', 'likes')
             q = request.GET.get('search')
             tech_filter = request.GET.get('tech')
 
@@ -256,7 +261,7 @@ def projects_list(request):
 @permission_classes([AllowAny])
 def project_detail(request, pk):
     try:
-        project = Project.objects.filter(id=pk).prefetch_related('tech_associations__tech', 'contributers__user').first()
+        project = Project.objects.filter(id=pk).prefetch_related('tech_associations__tech', 'contributers__user', 'likes').first()
         if not project:
             return Response({"message": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = ProjectSerializer(project)
@@ -309,6 +314,99 @@ def add_project_comment(request, pk):
         return Response(new_comment, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def like_project(request, pk):
+    """Toggle like/unlike for a project. Returns {liked, stars}."""
+    try:
+        project = Project.objects.filter(id=pk).first()
+        if not project:
+            return Response({"message": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        user_name = request.data.get('user_name')
+        if not user_name:
+            return Response({"message": "user_name is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(user_name=user_name).first()
+        if not user:
+            return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        with transaction.atomic():
+            existing = ProjectLike.objects.filter(project=project, user=user).first()
+            if existing:
+                # Unlike
+                existing.delete()
+                project.stars = max(0, project.stars - 1)
+                project.save(update_fields=['stars'])
+                return Response({"liked": False, "stars": project.stars}, status=status.HTTP_200_OK)
+            else:
+                # Like
+                ProjectLike.objects.create(project=project, user=user)
+                project.stars = project.stars + 1
+                project.save(update_fields=['stars'])
+                return Response({"liked": True, "stars": project.stars}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def fork_project(request, pk):
+    """Fork a project. Creates a new project owned by the requesting user."""
+    try:
+        original = Project.objects.filter(id=pk).prefetch_related('tech_associations__tech').first()
+        if not original:
+            return Response({"message": "Project not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        user_name = request.data.get('user_name')
+        if not user_name:
+            return Response({"message": "user_name is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects.filter(user_name=user_name).first()
+        if not user:
+            return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Prevent forking your own project
+        if original.owner_id == user.id:
+            return Response({"message": "You cannot fork your own project"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Prevent duplicate forks by same user
+        already_forked = Project.objects.filter(owner=user, forked_from=original).exists()
+        if already_forked:
+            return Response({"message": "You have already forked this project"}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            # Create forked project
+            forked = Project.objects.create(
+                title=f"{original.title} (Fork)",
+                tagline=original.tagline,
+                description=original.description,
+                owner=user,
+                roles_needed=original.roles_needed,
+                github=original.github,
+                stars=0,
+                forks=0,
+                forked_from=original,
+            )
+
+            # Copy tech stack associations
+            for assoc in original.tech_associations.all():
+                ProjectTechStack.objects.get_or_create(project=forked, tech=assoc.tech)
+
+            # Add user as owner in contributors
+            Contributor.objects.create(project=forked, user=user, role='Owner & Lead')
+
+            # Increment original project's forks count
+            original.forks = original.forks + 1
+            original.save(update_fields=['forks'])
+
+        serializer = ProjectSerializer(forked)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 @api_view(['GET', 'POST'])
